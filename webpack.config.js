@@ -1,7 +1,10 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const webpack = require('webpack');
 const path = require('path');
+const fs = require('fs');
 
+const package = JSON.parse(fs.readFileSync('package.json'));
 
 module.exports = [
     {
@@ -35,6 +38,7 @@ module.exports = [
         plugins: [
             new HtmlWebpackPlugin({ title: "Pixel Picker" }),
             new MiniCssExtractPlugin(),
+            new webpack.DefinePlugin({ __VERSION__: JSON.stringify('v' + package.version) }),
         ],
     },
 ];

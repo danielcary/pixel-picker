@@ -8,6 +8,8 @@ import Card from 'react-bootstrap/Card';
 import * as Icon from 'react-bootstrap-icons';
 import 'bootswatch/dist/darkly/bootstrap.min.css';
 
+declare const __VERSION__: string;
+
 // need favicon
 class RGBAColor {
     static readonly WHITE = new RGBAColor(0, 0, 0, 255);
@@ -173,7 +175,7 @@ class App extends React.Component<any, AppState>  {
                 <Container fluid>
                     <div className="font-monospace">
                         <h3>Pixel Picker</h3>
-                        <h5 className="text-muted">v0.1</h5>
+                        <h5 className="text-muted">{__VERSION__}</h5>
                     </div>
                     <Navbar.Toggle />
                     <Button className='btn-secondary'
