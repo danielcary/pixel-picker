@@ -10,7 +10,6 @@ import 'bootswatch/dist/darkly/bootstrap.min.css';
 
 declare const __VERSION__: string;
 
-// need favicon
 class RGBAColor {
     static readonly WHITE = new RGBAColor(0, 0, 0, 255);
     r: number = 0;
@@ -71,7 +70,7 @@ class PixelSampleComponent extends React.Component<PixelSampleComponentProps, an
 
     render(): React.ReactNode {
         return <Stack direction='horizontal' gap={2}>
-            <p style={{ width: '3rem' }}>
+            <p style={{ width: '4rem' }}>
                 X={this.props.sample.pos.x}
                 <br />
                 Y={this.props.sample.pos.y}
@@ -110,20 +109,6 @@ class App extends React.Component<any, AppState>  {
         };
     }
 
-    componentDidMount(): void {
-        let canvas = document.getElementById('myCanvas') as HTMLCanvasElement;
-
-        canvas.style.cursor = 'crosshair';
-
-        let ctx = canvas.getContext('2d')!;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = "22px Segoe UI";
-        ctx.fillStyle = 'black';
-        ctx.fillText('Drop or Upload Image', 10, canvas.height / 2, canvas.width - 20);
-    }
-
     async setImage(file: File): Promise<void> {
         if (!imageTypes.includes(file.type)) {
             // unsupported file mime type
@@ -144,8 +129,9 @@ class App extends React.Component<any, AppState>  {
         this.setState({ currentImg: img, currentImgName: file.name }, () => {
             canvas.width = this.state.currentImg!.width;
             canvas.height = this.state.currentImg!.height;
-            canvas.getContext("2d")?.drawImage(this.state.currentImg!, 0, 0);
-            document.title = 'Pixel Picker - ' + file.name;
+            let ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+            ctx.drawImage(this.state.currentImg!, 0, 0);
+            document.title = `Pixel Picker - '${file.name}'`;
             return Promise.resolve();
         });
     }
@@ -169,13 +155,53 @@ class App extends React.Component<any, AppState>  {
         URL.revokeObjectURL(blobUrl);
     }
 
+    onDrop = async (e: React.DragEvent<HTMLElement>): Promise<void> => {
+        // prevents file from being opened by browser
+        e.stopPropagation();
+        e.preventDefault();
+
+        this.setState({ dragging: false });
+        if (e.dataTransfer.files.length > 0) {
+            let firstFile = e.dataTransfer.files.item(0)!;
+            if (firstFile != null) {
+                await this.setImage(firstFile);
+            }
+        }
+
+        return Promise.resolve();
+    }
+
+    onDragOver = (e: React.DragEvent<HTMLElement>): void => {
+        // prevents file from being opened by browser
+        e.stopPropagation();
+        e.preventDefault();
+    }
+
+    sampleCanvas = (e: React.MouseEvent<HTMLElement>): void => {
+        let canvas = e.target as HTMLCanvasElement;
+        var rect = canvas.getBoundingClientRect();
+        let mouse = {
+            x: (e.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+            y: (e.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
+        };
+        mouse.x = Math.max(0, Math.round(mouse.x));
+        mouse.y = Math.max(0, Math.round(mouse.y));
+
+        let context = canvas.getContext("2d", { willReadFrequently: true });
+        let imgData = context!.getImageData(mouse.x, mouse.y, 1, 1)!;
+
+        let color = new RGBAColor(imgData.data[0], imgData.data[1], imgData.data[2], imgData.data[3]);
+        let sample = new PixelSample(mouse.x, mouse.y, color);
+
+        this.setState({ currentSample: sample });
+    }
+
     render(): React.ReactNode {
         return <div>
             <Navbar bg="primary">
                 <Container fluid>
                     <div className="font-monospace">
-                        <h3>Pixel Picker</h3>
-                        <h5 className="text-muted">{__VERSION__}</h5>
+                        <h3>Pixel Picker <small className="text-muted">{__VERSION__}</small></h3>
                     </div>
                     <Navbar.Toggle />
                     <Button className='btn-secondary'
@@ -199,67 +225,48 @@ class App extends React.Component<any, AppState>  {
                                     await this.setImage(file);
                                 }
                             }} />
+                        {!this.state.currentImg && <div
+                            onDrop={this.onDrop}
+                            onDragOver={this.onDragOver}
+                            style={{ height: '50vh', border: '2px dashed' }}>
+                            <h3 style={{ marginTop: 'calc(25vh - 0.5em)', textAlign: 'center' }}>
+                                Drop or Upload Image
+                            </h3>
+                        </div>}
                         <div
+                            hidden={this.state.currentImg == undefined}
                             className='overflow-auto'
                             style={{
+                                cursor: 'crosshair',
                                 textAlign: 'center',
-                                maxHeight: 1024,
-                                overflow: 'scroll'
+                                maxHeight: '90vh',
+                                overflow: 'scroll',
                             }}>
-                            <canvas id="myCanvas" width="200" height="100"
-                                onDrop={async (e) => {
-                                    // prevents file from being opened by browser
-                                    e.stopPropagation();
-                                    e.preventDefault();
-
-                                    this.setState({ dragging: false });
-                                    if (e.dataTransfer.files.length > 0) {
-                                        let firstFile = e.dataTransfer.files.item(0)!;
-                                        if (firstFile != null) {
-                                            await this.setImage(firstFile);
-                                        }
-                                    }
-                                }}
-                                onDragOver={e => {
-                                    // prevents file from being opened by browser
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                }}
+                            <canvas id="myCanvas"
+                                onDrop={this.onDrop}
+                                onDragOver={this.onDragOver}
                                 onDragEnter={() => this.setState({ dragging: true })}
                                 onDragLeave={() => this.setState({ dragging: false })}
-                                onMouseMove={e => {
-                                    let canvas = e.target as HTMLCanvasElement;
-                                    var rect = canvas.getBoundingClientRect();
-                                    let mouse = {
-                                        x: (e.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
-                                        y: (e.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
-                                    };
-                                    mouse.x = Math.max(0, Math.round(mouse.x));
-                                    mouse.y = Math.max(0, Math.round(mouse.y));
-
-                                    let context = canvas.getContext("2d", { willReadFrequently: true });
-                                    let imgData = context!.getImageData(mouse.x, mouse.y, 1, 1)!;
-
-                                    let color = new RGBAColor(imgData.data[0], imgData.data[1], imgData.data[2], imgData.data[3]);
-                                    let sample = new PixelSample(mouse.x, mouse.y, color);
-
-                                    this.setState({ currentSample: sample });
-                                }}
+                                onMouseMove={this.sampleCanvas}
                                 onMouseUp={() => {
                                     let samples = this.state.pickedSamples;
                                     samples.push(this.state.currentSample);
                                     this.setState({ pickedSamples: samples })
                                 }}
-                                style={{ border: this.state.dragging ? '2px dashed white' : '2px solid white' }}
+                                style={{
+                                    border: this.state.dragging ?
+                                        '2px dashed white' : '2px solid white'
+                                }}
                             />
                         </div>
                     </Col>
                     <Col md={4}>
-                        <Card>
+                        <Card style={{ height: '85vh' }}>
                             <Card.Header className="d-flex justify-content-between">
                                 <Card.Title>Picked Samples</Card.Title>
                                 <ButtonGroup>
                                     <Button variant='primary'
+                                        disabled={this.state.pickedSamples.length == 0}
                                         onClick={() => {
                                             this.setState({ sortToggle: !this.state.sortToggle });
                                         }}>
@@ -287,7 +294,10 @@ class App extends React.Component<any, AppState>  {
                                     </ListGroup.Item>
                                 </ListGroup>
                                 <br />
-                                <ListGroup variant='flush'>
+                                <ListGroup
+                                    variant='flush'
+                                    className='overflow-auto'
+                                    style={{ overflowY: 'scroll', height: 'calc(85vh - 200px)' }}>
                                     {(this.state.sortToggle ?
                                         this.state.pickedSamples.slice(0).reverse() :
                                         this.state.pickedSamples).map((sample, idx) =>

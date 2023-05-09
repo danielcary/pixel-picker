@@ -1,10 +1,11 @@
+const fs = require('fs');
+const path = require('path');
+const DefinePlugin = require('webpack').DefinePlugin;
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const webpack = require('webpack');
-const path = require('path');
-const fs = require('fs');
 
-const package = JSON.parse(fs.readFileSync('package.json'));
+
+const package = JSON.parse(fs.readFileSync('./package.json'));
 
 module.exports = [
     {
@@ -36,9 +37,9 @@ module.exports = [
             filename: 'app.js',
         },
         plugins: [
-            new HtmlWebpackPlugin({ title: "Pixel Picker" }),
+            new HtmlWebpackPlugin({ title: "Pixel Picker", favicon: './favicon.ico' }),
             new MiniCssExtractPlugin(),
-            new webpack.DefinePlugin({ __VERSION__: JSON.stringify('v' + package.version) }),
+            new DefinePlugin({ __VERSION__: JSON.stringify('v' + package.version) }),
         ],
     },
 ];
