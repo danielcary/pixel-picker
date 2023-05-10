@@ -1,14 +1,22 @@
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
+import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
-import { Container, Button, ListGroup, Row, Col } from 'react-bootstrap';
-import Stack from 'react-bootstrap/Stack';
-import Navbar from 'react-bootstrap/Navbar';
 import Card from 'react-bootstrap/Card';
+import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
+import ListGroup from 'react-bootstrap/ListGroup';
+import Navbar from 'react-bootstrap/Navbar';
+import Row from 'react-bootstrap/Row';
+import Stack from 'react-bootstrap/Stack';
 import * as Icon from 'react-bootstrap-icons';
 import 'bootswatch/dist/darkly/bootstrap.min.css';
 
+// webpack replaces with package.json verison
 declare const __VERSION__: string;
+
+// supported mime types
+const imageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 class RGBAColor {
     static readonly WHITE = new RGBAColor(0, 0, 0, 255);
@@ -53,48 +61,46 @@ class PixelSample {
 }
 
 type AppState = {
-    currentImg?: ImageBitmap,
-    currentImgName?: string,
-    currentSample: PixelSample,
-    pickedSamples: PixelSample[],
+    currentImg?: ImageBitmap;
+    currentImgName?: string;
+    currentSample: PixelSample;
+    pickedSamples: PixelSample[];
     dragging: boolean;
     sortToggle: boolean;
 };
 
 type PixelSampleComponentProps = {
-    sample: PixelSample,
+    sample: PixelSample;
 };
 
 class PixelSampleComponent extends React.Component<PixelSampleComponentProps, any>
 {
 
     render(): React.ReactNode {
-        return <Stack direction='horizontal' gap={2}>
-            <p style={{ width: '4rem' }}>
-                X={this.props.sample.pos.x}
-                <br />
-                Y={this.props.sample.pos.y}
-            </p>
-            <div className="vr" />
-            <svg width={30} height={30}>
-                <rect width={30} height={30}
-                    fill={this.props.sample.color.hexStr()}
-                    stroke='black'
-                    strokeWidth={2}
-                />
-            </svg>
-            <p>
+        return <Stack direction="horizontal" style={{ height: '4rem' }}>
+            <div style={{ paddingRight: '1rem' }}>
+                <svg width={'2rem'} height={'2rem'}>
+                    <rect width={'2rem'} height={'2rem'}
+                        fill={this.props.sample.color.hexStr()}
+                        stroke='black'
+                        strokeWidth={2}
+                    />
+                </svg>
+            </div>
+            <div style={{ width: '5em' }}>
                 {this.props.sample.color.hexStr()}
                 <br />
+                X={this.props.sample.pos.x}
+            </div>
+            <div>
                 {this.props.sample.color.rgbaStr()}
-            </p>
+                <br />
+                Y={this.props.sample.pos.y}
+            </div>
         </Stack>
     }
 
 }
-
-// supported mime types
-const imageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 class App extends React.Component<any, AppState>  {
 
@@ -109,7 +115,7 @@ class App extends React.Component<any, AppState>  {
         };
     }
 
-    async setImage(file: File): Promise<void> {
+    setImage = async (file: File): Promise<void> => {
         if (!imageTypes.includes(file.type)) {
             // unsupported file mime type
             console.error("Bad or unsupported file type: %s", file.type);
@@ -136,7 +142,7 @@ class App extends React.Component<any, AppState>  {
         });
     }
 
-    exportPointsToJSON() {
+    exportPointsToJSON = (): void => {
         let data = JSON.stringify(this.state.pickedSamples);
         let blob = new Blob([data], { type: 'text/json;charset=utf-8' })
 
@@ -196,6 +202,12 @@ class App extends React.Component<any, AppState>  {
         this.setState({ currentSample: sample });
     }
 
+    pickSample = (_e: React.MouseEvent<HTMLElement>): void => {
+        let samples = this.state.pickedSamples;
+        samples.push(this.state.currentSample);
+        this.setState({ pickedSamples: samples })
+    }
+
     render(): React.ReactNode {
         return <div>
             <Navbar bg="primary">
@@ -204,6 +216,17 @@ class App extends React.Component<any, AppState>  {
                         <h3>Pixel Picker <small className="text-muted">{__VERSION__}</small></h3>
                     </div>
                     <Navbar.Toggle />
+                    <input
+                        id="myInputFile"
+                        type="file"
+                        accept={imageTypes.reduce((a, val) => `${a}, ${val}`)}
+                        style={{ display: "none" }}
+                        onChange={async (e) => {
+                            if (e.target.files!.length > 0) {
+                                let file = e.target.files!.item(0)!;
+                                await this.setImage(file);
+                            }
+                        }} />
                     <Button className='btn-secondary'
                         onClick={() => { document.getElementById("myInputFile")!.click(); }}>
                         Upload Image
@@ -211,25 +234,20 @@ class App extends React.Component<any, AppState>  {
                 </Container>
             </Navbar>
             <Container fluid>
-                <br />
-                <Row>
+                <Row style={{ paddingTop: '1rem' }}>
                     <Col md={8}>
-                        <input
-                            id="myInputFile"
-                            type="file"
-                            accept={imageTypes.reduce((a, val) => `${a}, ${val}`)}
-                            style={{ display: "none" }}
-                            onChange={async (e) => {
-                                if (e.target.files!.length > 0) {
-                                    let file = e.target.files!.item(0)!;
-                                    await this.setImage(file);
-                                }
-                            }} />
                         {!this.state.currentImg && <div
                             onDrop={this.onDrop}
                             onDragOver={this.onDragOver}
-                            style={{ height: '50vh', border: '2px dashed' }}>
-                            <h3 style={{ marginTop: 'calc(25vh - 0.5em)', textAlign: 'center' }}>
+                            style={{
+                                height: '50vh',
+                                border: '2px dashed',
+                                marginBottom: '1rem',
+                            }}>
+                            <h3 style={{
+                                marginTop: 'calc(25vh - 0.5em)',
+                                textAlign: 'center',
+                            }}>
                                 Drop or Upload Image
                             </h3>
                         </div>}
@@ -241,6 +259,7 @@ class App extends React.Component<any, AppState>  {
                                 textAlign: 'center',
                                 maxHeight: '90vh',
                                 overflow: 'scroll',
+                                marginBottom: '1rem',
                             }}>
                             <canvas id="myCanvas"
                                 onDrop={this.onDrop}
@@ -248,11 +267,7 @@ class App extends React.Component<any, AppState>  {
                                 onDragEnter={() => this.setState({ dragging: true })}
                                 onDragLeave={() => this.setState({ dragging: false })}
                                 onMouseMove={this.sampleCanvas}
-                                onMouseUp={() => {
-                                    let samples = this.state.pickedSamples;
-                                    samples.push(this.state.currentSample);
-                                    this.setState({ pickedSamples: samples })
-                                }}
+                                onMouseUp={this.pickSample}
                                 style={{
                                     border: this.state.dragging ?
                                         '2px dashed white' : '2px solid white'
@@ -263,7 +278,7 @@ class App extends React.Component<any, AppState>  {
                     <Col md={4}>
                         <Card style={{ height: '85vh' }}>
                             <Card.Header className="d-flex justify-content-between">
-                                <Card.Title>Picked Samples</Card.Title>
+                                <Card.Title style={{ paddingTop: '0.5em' }}>Picked Samples</Card.Title>
                                 <ButtonGroup>
                                     <Button variant='primary'
                                         disabled={this.state.pickedSamples.length == 0}
@@ -293,29 +308,35 @@ class App extends React.Component<any, AppState>  {
                                         <PixelSampleComponent sample={this.state.currentSample} />
                                     </ListGroup.Item>
                                 </ListGroup>
-                                <br />
                                 <ListGroup
                                     variant='flush'
                                     className='overflow-auto'
-                                    style={{ overflowY: 'scroll', height: 'calc(85vh - 200px)' }}>
+                                    style={{
+                                        overflowY: 'scroll',
+                                        paddingTop: '1rem',
+                                        height: 'calc(85vh - 200px)'
+                                    }}>
                                     {(this.state.sortToggle ?
                                         this.state.pickedSamples.slice(0).reverse() :
                                         this.state.pickedSamples).map((sample, idx) =>
-                                            <ListGroup.Item key={idx} className="d-flex justify-content-between align-items-center">
-                                                <div className="ms-2 me-auto">
-                                                    <PixelSampleComponent sample={sample} />
-                                                </div>
-                                                <div className="ms-2 me-auto">
-                                                    <Button
-                                                        onClick={() => {
-                                                            let samples = this.state.pickedSamples;
-                                                            samples.splice(idx, 1);
-                                                            this.setState({ pickedSamples: samples });
-                                                        }}
-                                                        variant="danger">
-                                                        <Icon.XLg />
-                                                    </Button>
-                                                </div>
+                                            <ListGroup.Item key={idx}>
+                                                <Stack direction='horizontal'>
+                                                    <div>
+                                                        <PixelSampleComponent sample={sample} />
+                                                    </div>
+                                                    <div className='ms-auto'>
+                                                        <Button
+                                                            style={{ width: '3rem', height: '3rem' }}
+                                                            onClick={() => {
+                                                                let samples = this.state.pickedSamples;
+                                                                samples.splice(idx, 1);
+                                                                this.setState({ pickedSamples: samples });
+                                                            }}
+                                                            variant="danger">
+                                                            <Icon.XLg size={20} />
+                                                        </Button>
+                                                    </div>
+                                                </Stack>
                                             </ListGroup.Item>
                                         )
                                     }
