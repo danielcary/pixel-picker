@@ -185,7 +185,7 @@ class App extends React.Component<any, AppState>  {
 
     sampleCanvas = (e: React.MouseEvent<HTMLElement>): void => {
         let canvas = e.target as HTMLCanvasElement;
-        var rect = canvas.getBoundingClientRect();
+        let rect = canvas.getBoundingClientRect();
         let mouse = {
             x: (e.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
             y: (e.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height
@@ -206,6 +206,119 @@ class App extends React.Component<any, AppState>  {
         let samples = this.state.pickedSamples;
         samples.push(this.state.currentSample);
         this.setState({ pickedSamples: samples })
+    }
+
+    renderCanvas(): React.ReactNode {
+        return <div>
+            {!this.state.currentImg && <div
+                onDrop={this.onDrop}
+                onDragOver={this.onDragOver}
+                style={{
+                    height: '50vh',
+                    border: '2px dashed',
+                    marginBottom: '1rem',
+                }}>
+                <h3 style={{
+                    marginTop: 'calc(25vh - 0.5em)',
+                    textAlign: 'center',
+                }}>
+                    Drop or Upload Image
+                </h3>
+            </div>}
+            <div
+                hidden={this.state.currentImg == undefined}
+                className='overflow-auto'
+                style={{
+                    cursor: 'crosshair',
+                    textAlign: 'center',
+                    maxHeight: '90vh',
+                    overflow: 'scroll',
+                    marginBottom: '1rem',
+                }}>
+                <canvas id="myCanvas"
+                    onDrop={this.onDrop}
+                    onDragOver={this.onDragOver}
+                    onDragEnter={() => this.setState({ dragging: true })}
+                    onDragLeave={() => this.setState({ dragging: false })}
+                    onMouseMove={this.sampleCanvas}
+                    onMouseUp={this.pickSample}
+                    style={{
+                        border: this.state.dragging ?
+                            '2px dashed white' : '2px solid white'
+                    }}
+                />
+            </div>
+        </div>
+    }
+
+    renderSidePanel(): React.ReactNode {
+        return <Card style={{ height: '85vh' }}>
+            <Card.Header className="d-flex justify-content-between">
+                <Card.Title style={{ paddingTop: '0.5em' }}>Picked Samples</Card.Title>
+                <ButtonGroup>
+                    <Button variant='primary'
+                        disabled={this.state.pickedSamples.length == 0}
+                        onClick={() => {
+                            this.setState({ sortToggle: !this.state.sortToggle });
+                        }}>
+                        {!this.state.sortToggle && <Icon.ArrowDown size={20} />}
+                        {this.state.sortToggle && <Icon.ArrowUp size={20} />}
+                    </Button>
+                    <Button variant='primary'
+                        disabled={this.state.pickedSamples.length == 0}
+                        onClick={() => this.exportPointsToJSON()}>
+                        <Icon.Download style={{ marginRight: '0.5rem' }} size={20} />
+                        JSON
+                    </Button>
+                    <Button variant='danger'
+                        disabled={this.state.pickedSamples.length == 0}
+                        onClick={() => this.setState({ pickedSamples: [] })}>
+                        <Icon.Trash style={{ marginRight: '0.5rem' }} size={20} />
+                        {this.state.pickedSamples.length}
+                    </Button>
+                </ButtonGroup>
+            </Card.Header>
+            <Card.Body>
+                <ListGroup>
+                    <ListGroup.Item active>
+                        <PixelSampleComponent sample={this.state.currentSample} />
+                    </ListGroup.Item>
+                </ListGroup>
+                <ListGroup
+                    variant='flush'
+                    className='overflow-auto'
+                    style={{
+                        overflowY: 'scroll',
+                        paddingTop: '1rem',
+                        height: 'calc(85vh - 200px)'
+                    }}>
+                    {(this.state.sortToggle ?
+                        this.state.pickedSamples.slice(0).reverse() :
+                        this.state.pickedSamples).map((sample, idx) =>
+                            <ListGroup.Item key={idx}>
+                                <Stack direction='horizontal'>
+                                    <div>
+                                        <PixelSampleComponent sample={sample} />
+                                    </div>
+                                    <div className='ms-auto'>
+                                        <Button
+                                            style={{ width: '3rem', height: '3rem' }}
+                                            onClick={() => {
+                                                let samples = this.state.pickedSamples;
+                                                samples.splice(idx, 1);
+                                                this.setState({ pickedSamples: samples });
+                                            }}
+                                            variant="danger">
+                                            <Icon.XLg size={20} />
+                                        </Button>
+                                    </div>
+                                </Stack>
+                            </ListGroup.Item>
+                        )
+                    }
+                </ListGroup>
+            </Card.Body>
+        </Card>
     }
 
     render(): React.ReactNode {
@@ -236,113 +349,10 @@ class App extends React.Component<any, AppState>  {
             <Container fluid>
                 <Row style={{ paddingTop: '1rem' }}>
                     <Col md={8}>
-                        {!this.state.currentImg && <div
-                            onDrop={this.onDrop}
-                            onDragOver={this.onDragOver}
-                            style={{
-                                height: '50vh',
-                                border: '2px dashed',
-                                marginBottom: '1rem',
-                            }}>
-                            <h3 style={{
-                                marginTop: 'calc(25vh - 0.5em)',
-                                textAlign: 'center',
-                            }}>
-                                Drop or Upload Image
-                            </h3>
-                        </div>}
-                        <div
-                            hidden={this.state.currentImg == undefined}
-                            className='overflow-auto'
-                            style={{
-                                cursor: 'crosshair',
-                                textAlign: 'center',
-                                maxHeight: '90vh',
-                                overflow: 'scroll',
-                                marginBottom: '1rem',
-                            }}>
-                            <canvas id="myCanvas"
-                                onDrop={this.onDrop}
-                                onDragOver={this.onDragOver}
-                                onDragEnter={() => this.setState({ dragging: true })}
-                                onDragLeave={() => this.setState({ dragging: false })}
-                                onMouseMove={this.sampleCanvas}
-                                onMouseUp={this.pickSample}
-                                style={{
-                                    border: this.state.dragging ?
-                                        '2px dashed white' : '2px solid white'
-                                }}
-                            />
-                        </div>
+                        {this.renderCanvas()}
                     </Col>
                     <Col md={4}>
-                        <Card style={{ height: '85vh' }}>
-                            <Card.Header className="d-flex justify-content-between">
-                                <Card.Title style={{ paddingTop: '0.5em' }}>Picked Samples</Card.Title>
-                                <ButtonGroup>
-                                    <Button variant='primary'
-                                        disabled={this.state.pickedSamples.length == 0}
-                                        onClick={() => {
-                                            this.setState({ sortToggle: !this.state.sortToggle });
-                                        }}>
-                                        {!this.state.sortToggle && <Icon.ArrowDown size={20} />}
-                                        {this.state.sortToggle && <Icon.ArrowUp size={20} />}
-                                    </Button>
-                                    <Button variant='primary'
-                                        disabled={this.state.pickedSamples.length == 0}
-                                        onClick={() => this.exportPointsToJSON()}>
-                                        <Icon.Download style={{ marginRight: '0.5rem' }} size={20} />
-                                        JSON
-                                    </Button>
-                                    <Button variant='danger'
-                                        disabled={this.state.pickedSamples.length == 0}
-                                        onClick={() => this.setState({ pickedSamples: [] })}>
-                                        <Icon.Trash style={{ marginRight: '0.5rem' }} size={20} />
-                                        {this.state.pickedSamples.length}
-                                    </Button>
-                                </ButtonGroup>
-                            </Card.Header>
-                            <Card.Body>
-                                <ListGroup>
-                                    <ListGroup.Item active>
-                                        <PixelSampleComponent sample={this.state.currentSample} />
-                                    </ListGroup.Item>
-                                </ListGroup>
-                                <ListGroup
-                                    variant='flush'
-                                    className='overflow-auto'
-                                    style={{
-                                        overflowY: 'scroll',
-                                        paddingTop: '1rem',
-                                        height: 'calc(85vh - 200px)'
-                                    }}>
-                                    {(this.state.sortToggle ?
-                                        this.state.pickedSamples.slice(0).reverse() :
-                                        this.state.pickedSamples).map((sample, idx) =>
-                                            <ListGroup.Item key={idx}>
-                                                <Stack direction='horizontal'>
-                                                    <div>
-                                                        <PixelSampleComponent sample={sample} />
-                                                    </div>
-                                                    <div className='ms-auto'>
-                                                        <Button
-                                                            style={{ width: '3rem', height: '3rem' }}
-                                                            onClick={() => {
-                                                                let samples = this.state.pickedSamples;
-                                                                samples.splice(idx, 1);
-                                                                this.setState({ pickedSamples: samples });
-                                                            }}
-                                                            variant="danger">
-                                                            <Icon.XLg size={20} />
-                                                        </Button>
-                                                    </div>
-                                                </Stack>
-                                            </ListGroup.Item>
-                                        )
-                                    }
-                                </ListGroup>
-                            </Card.Body>
-                        </Card>
+                        {this.renderSidePanel()}
                     </Col>
                 </Row>
             </Container>
